@@ -1,0 +1,6 @@
+{
+  "name": "卡片路線規劃器",
+  "description": "將選項卡片自由拖拉組合並排序為多種執行路線，支援儲存、編輯與後續路線微調。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
