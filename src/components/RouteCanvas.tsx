@@ -136,7 +136,7 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
   return (
     <div
       id="route-canvas-container"
-      className="bg-white rounded-2xl border border-neutral-200 p-4 sm:p-5 flex flex-col h-full shadow-xs"
+      className="bg-white rounded-2xl border border-neutral-200 p-3 sm:p-5 flex flex-col h-full shadow-xs min-w-0 w-full overflow-hidden"
       onDragOver={handleContainerDragOver}
       onDragLeave={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -146,12 +146,12 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
       onDrop={handleDrop}
     >
       {/* Route Header */}
-      <div className="flex flex-col gap-2.5 sm:gap-3 pb-3 border-b border-neutral-100">
-        <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col gap-2.5 sm:gap-3 pb-3 border-b border-neutral-100 min-w-0 w-full">
+        <div className="flex items-center justify-between gap-2 min-w-0 w-full">
           {/* Title */}
           <div className="flex-1 min-w-0">
             {isEditingTitle ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 w-full min-w-0">
                 <input
                   id="route-title-input"
                   type="text"
@@ -162,12 +162,12 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
                     if (e.key === 'Escape') setIsEditingTitle(false);
                   }}
                   autoFocus
-                  className="w-full text-base font-bold text-neutral-900 bg-neutral-50 px-2.5 py-1.5 border border-neutral-300 rounded-lg focus:outline-hidden focus:bg-white focus:border-neutral-900"
+                  className="min-w-0 w-full flex-1 text-base font-bold text-neutral-900 bg-neutral-50 px-2.5 py-1.5 border border-neutral-300 rounded-lg focus:outline-hidden focus:bg-white focus:border-neutral-900"
                 />
                 <button
                   type="button"
                   onClick={handleTitleSubmit}
-                  className="p-2 sm:p-1.5 text-emerald-700 hover:bg-emerald-50 rounded-lg cursor-pointer shrink-0"
+                  className="p-1.5 text-emerald-700 hover:bg-emerald-50 rounded-lg cursor-pointer shrink-0"
                 >
                   <Check className="w-4 h-4" />
                 </button>

@@ -340,9 +340,9 @@ export default function App() {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-5xl w-full mx-auto p-3 sm:p-6 pb-24 sm:pb-6 flex flex-col gap-3 sm:gap-4">
+      <main className="flex-1 max-w-5xl w-full mx-auto p-2.5 sm:p-6 pb-24 sm:pb-6 flex flex-col gap-3 sm:gap-4 min-w-0 overflow-x-hidden sm:overflow-x-visible">
         {/* Route Tabs (Touch-friendly horizontal scroll) */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-3 px-3 sm:mx-0 sm:px-0">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-2.5 px-2.5 sm:mx-0 sm:px-0 min-w-0 w-full">
           <span className="text-xs font-semibold text-neutral-500 shrink-0">路線方案：</span>
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
             {routes.map((r) => {
@@ -385,10 +385,10 @@ export default function App() {
         </div>
 
         {/* Two-Column Responsive Workspace */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5 flex-1">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5 flex-1 min-w-0 w-full">
           {/* Column 1: Option Cards */}
           <div
-            className={`h-[calc(100dvh-185px)] min-h-[460px] sm:h-[620px] ${
+            className={`w-full min-w-0 h-[calc(100dvh-185px)] min-h-[460px] sm:h-[620px] ${
               mobileTab === 'cards' ? 'block' : 'hidden sm:block'
             }`}
           >
@@ -407,7 +407,7 @@ export default function App() {
 
           {/* Column 2: Route Canvas */}
           <div
-            className={`h-[calc(100dvh-185px)] min-h-[460px] sm:h-[620px] ${
+            className={`w-full min-w-0 h-[calc(100dvh-185px)] min-h-[460px] sm:h-[620px] ${
               mobileTab === 'route' ? 'block' : 'hidden sm:block'
             }`}
           >
