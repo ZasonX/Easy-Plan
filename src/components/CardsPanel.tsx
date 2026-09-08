@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { OptionCard } from '../types';
-import { Plus, Edit2, Trash2, Check, X, GripVertical } from 'lucide-react';
+import { Plus, Edit2, Trash2, Check, X, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface CardsPanelProps {
   cards: OptionCard[];
@@ -141,11 +141,16 @@ export const CardsPanel: React.FC<CardsPanelProps> = ({
       }`}
     >
       {/* Header */}
-      <div className="mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-bold text-neutral-900">
-            卡片 ({cards.length})
-          </h2>
+      <div className="mb-3 sm:mb-4">
+        <div className="flex items-center justify-between mb-2 sm:mb-3">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-bold text-neutral-900">
+              卡片庫
+            </h2>
+            <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full font-medium">
+              {cards.length}
+            </span>
+          </div>
           {isHoveringStepFromRoute && (
             <span className="text-xs text-rose-600 font-medium animate-pulse">
               放開即可自路線移除
@@ -160,16 +165,16 @@ export const CardsPanel: React.FC<CardsPanelProps> = ({
             type="text"
             value={newCardTitle}
             onChange={(e) => setNewCardTitle(e.target.value)}
-            placeholder="卡片內容"
-            className="flex-1 px-3 py-2 text-sm bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-hidden focus:bg-white focus:border-neutral-900 transition-colors"
+            placeholder="輸入卡片內容..."
+            className="flex-1 px-3.5 py-2.5 sm:py-2 text-base sm:text-sm bg-neutral-50 border border-neutral-200 rounded-xl focus:outline-hidden focus:bg-white focus:border-neutral-900 transition-colors"
           />
           <button
             id="add-card-submit-button"
             type="submit"
             disabled={!newCardTitle.trim()}
-            className="px-3.5 py-2 bg-neutral-900 hover:bg-neutral-800 disabled:opacity-40 text-white text-xs font-medium rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+            className="px-4 py-2.5 sm:py-2 bg-neutral-900 hover:bg-neutral-800 disabled:opacity-40 text-white text-xs sm:text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0 min-h-[42px] sm:min-h-0"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
             <span>新增</span>
           </button>
         </form>
@@ -184,8 +189,8 @@ export const CardsPanel: React.FC<CardsPanelProps> = ({
         }}
       >
         {cards.length === 0 ? (
-          <div className="py-12 text-center text-xs text-neutral-400">
-            目前沒有任何卡片，請在上方輸入卡片內容新增
+          <div className="py-14 sm:py-16 text-center text-xs text-neutral-400">
+            目前沒有任何卡片，請在上方輸入內容點擊「新增」
           </div>
         ) : (
           cards.map((card, index) => {
@@ -202,7 +207,7 @@ export const CardsPanel: React.FC<CardsPanelProps> = ({
                 )}
 
                 {isEditing ? (
-                  <div className="p-2.5 bg-amber-50/50 border border-amber-300 rounded-xl flex items-center gap-2">
+                  <div className="p-2.5 sm:p-2 bg-amber-50/60 border border-amber-300 rounded-xl flex items-center gap-2">
                     <input
                       type="text"
                       value={editingTitle}
@@ -212,12 +217,12 @@ export const CardsPanel: React.FC<CardsPanelProps> = ({
                         if (e.key === 'Escape') setEditingCardId(null);
                       }}
                       autoFocus
-                      className="flex-1 px-2 py-1 text-sm bg-white border border-neutral-300 rounded-lg focus:outline-hidden focus:border-neutral-900"
+                      className="flex-1 px-3 py-1.5 text-base sm:text-sm bg-white border border-neutral-300 rounded-lg focus:outline-hidden focus:border-neutral-900"
                     />
                     <button
                       type="button"
                       onClick={() => saveEdit(card.id)}
-                      className="p-1.5 text-emerald-700 hover:bg-emerald-100 rounded-lg cursor-pointer"
+                      className="p-2 sm:p-1.5 text-emerald-700 hover:bg-emerald-100 rounded-lg cursor-pointer"
                       title="確認修改"
                     >
                       <Check className="w-4 h-4" />
@@ -225,7 +230,7 @@ export const CardsPanel: React.FC<CardsPanelProps> = ({
                     <button
                       type="button"
                       onClick={() => setEditingCardId(null)}
-                      className="p-1.5 text-neutral-400 hover:bg-neutral-100 rounded-lg cursor-pointer"
+                      className="p-2 sm:p-1.5 text-neutral-400 hover:bg-neutral-100 rounded-lg cursor-pointer"
                       title="取消"
                     >
                       <X className="w-4 h-4" />
@@ -239,31 +244,63 @@ export const CardsPanel: React.FC<CardsPanelProps> = ({
                     onDragEnd={handleCardDragEnd}
                     onDragOver={(e) => handleItemDragOver(e, index)}
                     onClick={() => onAddToRoute(card.id)}
-                    className={`group relative p-3 bg-white hover:bg-amber-50/40 border rounded-xl transition-all cursor-pointer flex items-center justify-between gap-3 shadow-2xs ${
+                    className={`group relative p-3 sm:p-2.5 bg-white hover:bg-amber-50/40 border rounded-xl transition-all cursor-pointer flex items-center justify-between gap-2.5 shadow-2xs ${
                       isBeingDragged
                         ? 'opacity-30 border-dashed border-neutral-400'
                         : 'border-neutral-200 hover:border-amber-300'
                     }`}
                     title="點擊加入右側路線，亦可上下拖曳調整順序或拖至路線"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
                       <span className="text-neutral-400 group-hover:text-neutral-700 cursor-grab active:cursor-grabbing shrink-0">
-                        <GripVertical className="w-3.5 h-3.5" />
+                        <GripVertical className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                       </span>
                       <span className="text-sm font-medium text-neutral-800 group-hover:text-neutral-950 truncate">
                         {card.title}
                       </span>
                     </div>
 
-                    {/* Card Actions */}
+                    {/* Card Actions (Optimized for both Mobile Touch & Desktop) */}
                     <div className="flex items-center gap-1 shrink-0">
+                      {/* Mobile Up/Down Quick Reorder Buttons (Visible on mobile for easy touch sorting) */}
+                      <div className="flex items-center gap-0.5 sm:hidden">
+                        <button
+                          type="button"
+                          disabled={index === 0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onReorderCards(index, index - 1);
+                          }}
+                          className={`p-1.5 text-neutral-400 hover:text-neutral-800 rounded-md transition-colors ${
+                            index === 0 ? 'invisible pointer-events-none' : 'active:bg-neutral-100'
+                          }`}
+                          title="上移卡片"
+                        >
+                          <ChevronUp className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          disabled={index === cards.length - 1}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onReorderCards(index, index + 1);
+                          }}
+                          className={`p-1.5 text-neutral-400 hover:text-neutral-800 rounded-md transition-colors ${
+                            index === cards.length - 1 ? 'invisible pointer-events-none' : 'active:bg-neutral-100'
+                          }`}
+                          title="下移卡片"
+                        >
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                      </div>
+
                       <button
                         type="button"
                         onClick={(e) => startEdit(card, e)}
-                        className="p-1 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-md transition-colors cursor-pointer"
+                        className="p-2 sm:p-1 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
                         title="修改卡片名稱"
                       >
-                        <Edit2 className="w-3.5 h-3.5" />
+                        <Edit2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                       </button>
                       <button
                         type="button"
@@ -273,12 +310,12 @@ export const CardsPanel: React.FC<CardsPanelProps> = ({
                             onDeleteCard(card.id);
                           }
                         }}
-                        className="p-1 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
+                        className="p-2 sm:p-1 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                         title="刪除此卡片"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                       </button>
-                      <span className="ml-1 px-2 py-0.5 text-xs font-semibold bg-neutral-50 border border-neutral-200 text-neutral-700 group-hover:bg-neutral-900 group-hover:text-white group-hover:border-neutral-900 rounded-lg transition-colors">
+                      <span className="ml-0.5 sm:ml-1 px-2.5 py-1 sm:px-2 sm:py-0.5 text-xs font-semibold bg-neutral-50 border border-neutral-200 text-neutral-700 group-hover:bg-neutral-900 group-hover:text-white group-hover:border-neutral-900 rounded-lg transition-colors">
                         + 加入
                       </span>
                     </div>

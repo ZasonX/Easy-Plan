@@ -146,98 +146,100 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
       onDrop={handleDrop}
     >
       {/* Route Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-neutral-100">
-        {/* Title */}
-        <div className="flex-1 min-w-0">
-          {isEditingTitle ? (
-            <div className="flex items-center gap-2">
-              <input
-                id="route-title-input"
-                type="text"
-                value={titleValue}
-                onChange={(e) => setTitleValue(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleTitleSubmit();
-                  if (e.key === 'Escape') setIsEditingTitle(false);
+      <div className="flex flex-col gap-2.5 sm:gap-3 pb-3 border-b border-neutral-100">
+        <div className="flex items-center justify-between gap-2">
+          {/* Title */}
+          <div className="flex-1 min-w-0">
+            {isEditingTitle ? (
+              <div className="flex items-center gap-2">
+                <input
+                  id="route-title-input"
+                  type="text"
+                  value={titleValue}
+                  onChange={(e) => setTitleValue(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleTitleSubmit();
+                    if (e.key === 'Escape') setIsEditingTitle(false);
+                  }}
+                  autoFocus
+                  className="w-full text-base font-bold text-neutral-900 bg-neutral-50 px-2.5 py-1.5 border border-neutral-300 rounded-lg focus:outline-hidden focus:bg-white focus:border-neutral-900"
+                />
+                <button
+                  type="button"
+                  onClick={handleTitleSubmit}
+                  className="p-2 sm:p-1.5 text-emerald-700 hover:bg-emerald-50 rounded-lg cursor-pointer shrink-0"
+                >
+                  <Check className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 group">
+                <h2 className="text-base sm:text-lg font-bold text-neutral-900 truncate">
+                  {route.title}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingTitle(true)}
+                  className="p-1.5 sm:p-1 text-neutral-400 hover:text-neutral-700 rounded-md transition-colors cursor-pointer shrink-0"
+                  title="重新命名此路線"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+                <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full font-medium shrink-0">
+                  {route.steps.length} 步
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Toolbar Actions */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleCopy}
+              disabled={route.steps.length === 0}
+              className="px-2.5 py-1.5 text-xs font-medium text-neutral-700 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-30"
+              title="複製路線步驟清單"
+            >
+              {copied ? <CheckCheck className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              <span className="hidden xs:inline">{copied ? '已複製' : '複製文字'}</span>
+            </button>
+
+            {route.steps.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('確定要清空這條路線的所有卡片嗎？')) {
+                    onClearSteps();
+                  }
                 }}
-                autoFocus
-                className="text-base font-bold text-neutral-900 bg-neutral-50 px-2.5 py-1 border border-neutral-300 rounded-lg focus:outline-hidden focus:bg-white focus:border-neutral-900"
-              />
+                className="px-2 py-1.5 text-xs text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
+              >
+                清空
+              </button>
+            )}
+
+            {totalRoutesCount > 1 && (
               <button
                 type="button"
-                onClick={handleTitleSubmit}
-                className="p-1.5 text-emerald-700 hover:bg-emerald-50 rounded-lg cursor-pointer"
+                onClick={() => {
+                  if (window.confirm(`確定要刪除「${route.title}」嗎？`)) {
+                    onDeleteRoute();
+                  }
+                }}
+                className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                title="刪除此路線"
               >
-                <Check className="w-4 h-4" />
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2 group">
-              <h2 className="text-base sm:text-lg font-bold text-neutral-900 truncate">
-                {route.title}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setIsEditingTitle(true)}
-                className="p-1 text-neutral-400 hover:text-neutral-700 opacity-60 group-hover:opacity-100 rounded-md transition-opacity cursor-pointer"
-                title="重新命名此路線"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-              </button>
-              <span className="text-xs text-neutral-400 font-normal">
-                ({route.steps.length} 個步驟)
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Toolbar */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleCopy}
-            disabled={route.steps.length === 0}
-            className="px-2.5 py-1.5 text-xs font-medium text-neutral-700 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-30"
-            title="複製路線步驟清單"
-          >
-            {copied ? <CheckCheck className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-            <span>{copied ? '已複製' : '複製文字'}</span>
-          </button>
-
-          {route.steps.length > 0 && (
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm('確定要清空這條路線的所有卡片嗎？')) {
-                  onClearSteps();
-                }
-              }}
-              className="px-2.5 py-1.5 text-xs text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
-            >
-              清空
-            </button>
-          )}
-
-          {totalRoutesCount > 1 && (
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm(`確定要刪除「${route.title}」嗎？`)) {
-                  onDeleteRoute();
-                }
-              }}
-              className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-              title="刪除此路線"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
       {/* Steps List */}
       <div
-        className="flex-1 overflow-y-auto pt-3 pb-2 space-y-2"
+        className="flex-1 overflow-y-auto pt-3 pb-2 space-y-2 pr-1"
         onDragOver={(e) => {
           e.preventDefault();
           if (route.steps.length === 0) setDropSlot(0);
@@ -245,7 +247,7 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
       >
         {route.steps.length === 0 ? (
           <div
-            className={`h-64 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-6 text-center transition-colors ${
+            className={`h-56 sm:h-64 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-6 text-center transition-colors ${
               dropSlot !== null ? 'border-neutral-900 bg-neutral-50' : 'border-neutral-200'
             }`}
           >
@@ -253,7 +255,7 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
               路線目前空白
             </p>
             <p className="text-xs text-neutral-400 max-w-xs">
-              點擊左側卡片「+ 加入」或拖曳卡片至此處排定路線
+              點擊卡片庫中的卡片「+ 加入」或拖曳卡片排定路線步驟
             </p>
           </div>
         ) : (
@@ -270,24 +272,24 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
                   <div className="h-1 bg-neutral-900 rounded-full mx-1 transition-all" />
                 )}
 
-                {/* Step Card */}
+                {/* Step Card (Touch-optimized controls on mobile) */}
                 <div
                   draggable
                   onDragStart={(e) => handleStepDragStart(e, index)}
                   onDragEnd={handleStepDragEnd}
                   onDragOver={(e) => handleStepDragOver(e, index)}
-                  className={`p-3 bg-white border rounded-xl flex items-center justify-between gap-3 shadow-2xs transition-all ${
+                  className={`p-3 sm:p-2.5 bg-white border rounded-xl flex items-center justify-between gap-2.5 shadow-2xs transition-all ${
                     isDragging
                       ? 'opacity-30 border-dashed border-neutral-400'
                       : 'border-neutral-200 hover:border-neutral-300'
                   }`}
                   title="可上下拖曳調整順序，亦可拖回左側卡庫移除"
                 >
-                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                    <span className="text-neutral-400 hover:text-neutral-700 cursor-grab active:cursor-grabbing shrink-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <span className="text-neutral-400 hover:text-neutral-700 cursor-grab active:cursor-grabbing shrink-0 hidden xs:inline-block">
                       <GripVertical className="w-3.5 h-3.5" />
                     </span>
-                    <span className="w-5 h-5 rounded-full bg-neutral-900 text-white text-xs font-semibold flex items-center justify-center shrink-0">
+                    <span className="w-5 h-5 sm:w-5 sm:h-5 rounded-full bg-neutral-900 text-white text-xs font-semibold flex items-center justify-center shrink-0">
                       {index + 1}
                     </span>
                     <span className="text-sm font-semibold text-neutral-900 truncate">
@@ -295,16 +297,16 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
                     </span>
                   </div>
 
-                  {/* Move & Delete Controls */}
-                  <div className="flex items-center gap-1 shrink-0">
+                  {/* Move & Delete Controls with comfortable touch targets */}
+                  <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
                     <button
                       type="button"
                       disabled={index === 0}
                       onClick={() => onMoveStep(index, index - 1)}
-                      className={`p-1 rounded-md transition-colors ${
+                      className={`p-2 sm:p-1 rounded-md transition-colors min-w-[32px] min-h-[32px] flex items-center justify-center ${
                         index === 0
                           ? 'invisible pointer-events-none'
-                          : 'text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100 cursor-pointer'
+                          : 'text-neutral-400 hover:text-neutral-800 active:bg-neutral-100 hover:bg-neutral-100 cursor-pointer'
                       }`}
                       title="往上移"
                     >
@@ -314,10 +316,10 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
                       type="button"
                       disabled={index === route.steps.length - 1}
                       onClick={() => onMoveStep(index, index + 1)}
-                      className={`p-1 rounded-md transition-colors ${
+                      className={`p-2 sm:p-1 rounded-md transition-colors min-w-[32px] min-h-[32px] flex items-center justify-center ${
                         index === route.steps.length - 1
                           ? 'invisible pointer-events-none'
-                          : 'text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100 cursor-pointer'
+                          : 'text-neutral-400 hover:text-neutral-800 active:bg-neutral-100 hover:bg-neutral-100 cursor-pointer'
                       }`}
                       title="往下移"
                     >
@@ -326,7 +328,7 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
                     <button
                       type="button"
                       onClick={() => onRemoveStep(index)}
-                      className="p-1 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
+                      className="p-2 sm:p-1 text-neutral-400 hover:text-rose-600 active:bg-rose-50 hover:bg-rose-50 rounded-md transition-colors cursor-pointer min-w-[32px] min-h-[32px] flex items-center justify-center"
                       title="從路線移除"
                     >
                       <X className="w-4 h-4" />

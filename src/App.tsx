@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { RoutePlan, OptionCard, RouteStep } from './types';
 import { DEFAULT_OPTION_CARDS, DEFAULT_ROUTES } from './data/defaultData';
 import {
@@ -11,7 +11,7 @@ import {
 } from './utils/storage';
 import { CardsPanel } from './components/CardsPanel';
 import { RouteCanvas } from './components/RouteCanvas';
-import { Plus, Undo2, Redo2 } from 'lucide-react';
+import { Plus, Undo2, Redo2, Layers, ListOrdered, ArrowRight } from 'lucide-react';
 
 interface HistorySnapshot {
   routes: RoutePlan[];
@@ -37,6 +37,10 @@ export default function App() {
 
   // Mobile tab toggle: 'cards' | 'route'
   const [mobileTab, setMobileTab] = useState<'cards' | 'route'>('cards');
+
+  // Mobile toast when a card is added to route
+  const [toastMessage, setToastMessage] = useState<{ text: string; stepNumber: number } | null>(null);
+  const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Helper to record history before a mutation
   const recordHistory = useCallback(() => {
@@ -143,12 +147,10 @@ export default function App() {
   }, [cards]);
 
   useEffect(() => {
-    if (activeRouteId) {
-      saveActiveRouteId(activeRouteId);
-    }
+    saveActiveRouteId(activeRouteId);
   }, [activeRouteId]);
 
-  // Card lookup map
+  // Derived state
   const cardsMap = useMemo(() => {
     const map: Record<string, OptionCard> = {};
     cards.forEach((c) => {
@@ -157,7 +159,6 @@ export default function App() {
     return map;
   }, [cards]);
 
-  // Current active route
   const activeRoute = useMemo(() => {
     return routes.find((r) => r.id === activeRouteId) || routes[0] || null;
   }, [routes, activeRouteId]);
@@ -168,7 +169,7 @@ export default function App() {
     const newIndex = routes.length + 1;
     const newRoute: RoutePlan = {
       id: `r-${Date.now()}`,
-      title: `新路線 ${newIndex}`,
+      title: `路線 ${newIndex}`,
       steps: [],
     };
     setRoutes((prev) => [...prev, newRoute]);
@@ -185,7 +186,7 @@ export default function App() {
 
   const handleDeleteRoute = useCallback(() => {
     if (routes.length <= 1) {
-      alert('請至少保留一條路線！');
+      alert('請至少保留一條路線方案');
       return;
     }
     recordHistory();
@@ -211,17 +212,31 @@ export default function App() {
         cardId,
       };
       const updatedSteps = [...activeRoute.steps];
-      if (typeof atIndex === 'number' && atIndex >= 0 && atIndex <= updatedSteps.length) {
-        updatedSteps.splice(atIndex, 0, newStep);
-      } else {
-        updatedSteps.push(newStep);
-      }
+      const targetPos =
+        typeof atIndex === 'number' && atIndex >= 0 && atIndex <= updatedSteps.length
+          ? atIndex
+          : updatedSteps.length;
+
+      updatedSteps.splice(targetPos, 0, newStep);
 
       setRoutes((prev) =>
         prev.map((r) => (r.id === activeRoute.id ? { ...r, steps: updatedSteps } : r))
       );
+
+      // Mobile toast notification
+      const card = cards.find((c) => c.id === cardId);
+      if (card) {
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+        setToastMessage({
+          text: `「${card.title}」已加入`,
+          stepNumber: targetPos + 1,
+        });
+        toastTimerRef.current = setTimeout(() => {
+          setToastMessage(null);
+        }, 2500);
+      }
     },
-    [activeRoute, recordHistory]
+    [activeRoute, recordHistory, cards]
   );
 
   const handleMoveStep = useCallback(
@@ -290,20 +305,20 @@ export default function App() {
   return (
     <div className="min-h-screen bg-neutral-100 flex flex-col font-['Noto_Sans_TC',sans-serif] text-neutral-900 antialiased selection:bg-amber-100">
       {/* Top Simple Header */}
-      <header className="bg-white border-b border-neutral-200/80 px-4 sm:px-6 py-3 sticky top-0 z-20">
+      <header className="bg-white border-b border-neutral-200/80 px-3.5 sm:px-6 py-2.5 sm:py-3 sticky top-0 z-20 shadow-2xs">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <h1 className="text-base sm:text-lg font-bold text-neutral-900 tracking-tight">
             卡片路線規劃
           </h1>
 
-          {/* Undo / Redo controls */}
-          <div className="flex items-center gap-1.5">
+          {/* Undo / Redo controls (Touch-friendly sizes) */}
+          <div className="flex items-center gap-1 sm:gap-1.5">
             <button
               id="undo-button"
               type="button"
               disabled={undoStack.length === 0}
               onClick={handleUndo}
-              className="px-2.5 py-1.5 text-xs font-medium rounded-xl border transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-30 disabled:pointer-events-none bg-white hover:bg-neutral-100 border-neutral-200 text-neutral-800 shadow-2xs"
+              className="px-2.5 py-1.5 sm:px-2.5 sm:py-1.5 text-xs font-medium rounded-xl border transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-30 disabled:pointer-events-none bg-white hover:bg-neutral-100 active:bg-neutral-100 border-neutral-200 text-neutral-800 shadow-2xs min-h-[36px] sm:min-h-0"
               title="復原上一動 (Ctrl+Z 或 Cmd+Z)"
             >
               <Undo2 className="w-3.5 h-3.5" />
@@ -314,7 +329,7 @@ export default function App() {
               type="button"
               disabled={redoStack.length === 0}
               onClick={handleRedo}
-              className="px-2.5 py-1.5 text-xs font-medium rounded-xl border transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-30 disabled:pointer-events-none bg-white hover:bg-neutral-100 border-neutral-200 text-neutral-800 shadow-2xs"
+              className="px-2.5 py-1.5 sm:px-2.5 sm:py-1.5 text-xs font-medium rounded-xl border transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-30 disabled:pointer-events-none bg-white hover:bg-neutral-100 active:bg-neutral-100 border-neutral-200 text-neutral-800 shadow-2xs min-h-[36px] sm:min-h-0"
               title="重做 (Ctrl+Y 或 Cmd+Shift+Z)"
             >
               <Redo2 className="w-3.5 h-3.5" />
@@ -325,9 +340,9 @@ export default function App() {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 max-w-5xl w-full mx-auto p-4 sm:p-6 flex flex-col gap-4">
-        {/* Route Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+      <main className="flex-1 max-w-5xl w-full mx-auto p-3 sm:p-6 pb-24 sm:pb-6 flex flex-col gap-3 sm:gap-4">
+        {/* Route Tabs (Touch-friendly horizontal scroll) */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none -mx-3 px-3 sm:mx-0 sm:px-0">
           <span className="text-xs font-semibold text-neutral-500 shrink-0">路線方案：</span>
           <div className="flex items-center gap-1.5 flex-1 min-w-0">
             {routes.map((r) => {
@@ -338,12 +353,11 @@ export default function App() {
                   type="button"
                   onClick={() => {
                     setActiveRouteId(r.id);
-                    setMobileTab('route');
                   }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 min-h-[36px] sm:min-h-0 ${
                     isActive
                       ? 'bg-neutral-900 text-white shadow-xs'
-                      : 'bg-white text-neutral-600 hover:bg-neutral-200/80 hover:text-neutral-900 border border-neutral-200'
+                      : 'bg-white text-neutral-600 hover:bg-neutral-200/80 active:bg-neutral-100 hover:text-neutral-900 border border-neutral-200'
                   }`}
                 >
                   <span>{r.title}</span>
@@ -361,7 +375,7 @@ export default function App() {
             <button
               type="button"
               onClick={handleCreateNewRoute}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-neutral-600 bg-white hover:bg-neutral-50 hover:text-neutral-900 border border-dashed border-neutral-300 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+              className="px-2.5 py-1.5 rounded-xl text-xs font-semibold text-neutral-600 bg-white hover:bg-neutral-50 active:bg-neutral-100 hover:text-neutral-900 border border-dashed border-neutral-300 transition-colors flex items-center gap-1 cursor-pointer shrink-0 min-h-[36px] sm:min-h-0"
               title="新增一條新路線"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -370,32 +384,14 @@ export default function App() {
           </div>
         </div>
 
-        {/* Mobile View Toggle (Hidden on Tablet / Desktop) */}
-        <div className="flex sm:hidden bg-neutral-200/70 p-1 rounded-xl text-xs font-semibold">
-          <button
-            type="button"
-            onClick={() => setMobileTab('cards')}
-            className={`flex-1 py-1.5 rounded-lg text-center transition-colors cursor-pointer ${
-              mobileTab === 'cards' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600'
-            }`}
-          >
-            ① 卡片 ({cards.length})
-          </button>
-          <button
-            type="button"
-            onClick={() => setMobileTab('route')}
-            className={`flex-1 py-1.5 rounded-lg text-center transition-colors cursor-pointer ${
-              mobileTab === 'route' ? 'bg-white text-neutral-900 shadow-xs' : 'text-neutral-600'
-            }`}
-          >
-            ② 路線 ({activeRoute?.steps.length || 0})
-          </button>
-        </div>
-
-        {/* Two-Column Simplified Workspace */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 min-h-[520px] flex-1">
+        {/* Two-Column Responsive Workspace */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5 flex-1">
           {/* Column 1: Option Cards */}
-          <div className={`h-[560px] ${mobileTab === 'cards' ? 'block' : 'hidden sm:block'}`}>
+          <div
+            className={`h-[calc(100dvh-185px)] min-h-[460px] sm:h-[620px] ${
+              mobileTab === 'cards' ? 'block' : 'hidden sm:block'
+            }`}
+          >
             <CardsPanel
               cards={cards}
               onAddCard={handleAddCard}
@@ -410,7 +406,11 @@ export default function App() {
           </div>
 
           {/* Column 2: Route Canvas */}
-          <div className={`h-[560px] ${mobileTab === 'route' ? 'block' : 'hidden sm:block'}`}>
+          <div
+            className={`h-[calc(100dvh-185px)] min-h-[460px] sm:h-[620px] ${
+              mobileTab === 'route' ? 'block' : 'hidden sm:block'
+            }`}
+          >
             {activeRoute ? (
               <RouteCanvas
                 route={activeRoute}
@@ -431,6 +431,76 @@ export default function App() {
           </div>
         </div>
       </main>
+
+      {/* Mobile Toast Notification (Quick feedback when adding cards to route) */}
+      {toastMessage && mobileTab === 'cards' && (
+        <div className="sm:hidden fixed bottom-18 left-4 right-4 z-40 bg-neutral-900/95 backdrop-blur-sm text-white px-4 py-2.5 rounded-2xl shadow-xl flex items-center justify-between gap-3 border border-neutral-800">
+          <div className="text-xs truncate flex items-center gap-2">
+            <span className="w-4 h-4 rounded-full bg-emerald-500 text-neutral-950 font-bold text-[10px] flex items-center justify-center shrink-0">
+              ✓
+            </span>
+            <span className="truncate">
+              {toastMessage.text} (第 {toastMessage.stepNumber} 步)
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setMobileTab('route');
+              setToastMessage(null);
+            }}
+            className="text-xs font-semibold text-amber-300 hover:text-amber-200 shrink-0 flex items-center gap-1 cursor-pointer pl-2"
+          >
+            <span>查看路線</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Mobile Bottom Navigation Bar (Thumb-reachable native feel) */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-neutral-200/80 px-4 py-2 pb-[max(0.625rem,env(safe-area-inset-bottom))] shadow-lg flex items-center justify-around gap-2">
+        <button
+          id="mobile-tab-cards"
+          type="button"
+          onClick={() => setMobileTab('cards')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-medium text-xs transition-all cursor-pointer ${
+            mobileTab === 'cards'
+              ? 'bg-neutral-900 text-white shadow-xs font-semibold'
+              : 'text-neutral-600 hover:bg-neutral-100 active:bg-neutral-100'
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          <span>卡片庫</span>
+          <span
+            className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+              mobileTab === 'cards' ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-100 text-neutral-600'
+            }`}
+          >
+            {cards.length}
+          </span>
+        </button>
+
+        <button
+          id="mobile-tab-route"
+          type="button"
+          onClick={() => setMobileTab('route')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl font-medium text-xs transition-all cursor-pointer ${
+            mobileTab === 'route'
+              ? 'bg-neutral-900 text-white shadow-xs font-semibold'
+              : 'text-neutral-600 hover:bg-neutral-100 active:bg-neutral-100'
+          }`}
+        >
+          <ListOrdered className="w-4 h-4" />
+          <span>規劃路線</span>
+          <span
+            className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+              mobileTab === 'route' ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-100 text-neutral-600'
+            }`}
+          >
+            {activeRoute?.steps.length || 0}
+          </span>
+        </button>
+      </div>
     </div>
   );
 }
