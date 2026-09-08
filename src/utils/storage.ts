@@ -2,10 +2,28 @@ import { OptionCard, RoutePlan } from '../types';
 import { DEFAULT_OPTION_CARDS, DEFAULT_ROUTES } from '../data/defaultData';
 
 const STORAGE_KEYS = {
-  ROUTES: 'simple_card_routes_v2',
-  CARDS: 'simple_card_items_v2',
-  ACTIVE_ID: 'simple_card_active_route_v2',
+  ROUTES: 'simple_card_routes_v3',
+  CARDS: 'simple_card_items_v3',
+  ACTIVE_ID: 'simple_card_active_route_v3',
 };
+
+// Check and clear legacy mock data if needed
+function cleanupLegacyMockData(): void {
+  try {
+    const legacyCards = localStorage.getItem('simple_card_items_v2');
+    if (legacyCards && (legacyCards.includes('看塔') || legacyCards.includes('除戶'))) {
+      localStorage.removeItem('simple_card_items_v2');
+      localStorage.removeItem('simple_card_routes_v2');
+      localStorage.removeItem('simple_card_active_route_v2');
+      localStorage.removeItem('simple_card_items');
+      localStorage.removeItem('simple_card_routes');
+    }
+  } catch {
+    // ignore
+  }
+}
+
+cleanupLegacyMockData();
 
 export function loadSavedRoutes(): RoutePlan[] {
   try {
@@ -31,7 +49,7 @@ export function loadOptionCards(): OptionCard[] {
     const raw = localStorage.getItem(STORAGE_KEYS.CARDS);
     if (!raw) return DEFAULT_OPTION_CARDS;
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_OPTION_CARDS;
+    return Array.isArray(parsed) ? parsed : DEFAULT_OPTION_CARDS;
   } catch {
     return DEFAULT_OPTION_CARDS;
   }
