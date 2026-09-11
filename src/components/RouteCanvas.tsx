@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
 import { RoutePlan, OptionCard } from '../types';
 import {
-  ArrowDown,
+  GripVertical,
+  X,
+  Copy,
+  Check,
+  CheckCheck,
+  Trash2,
+  Edit2,
   ChevronUp,
   ChevronDown,
-  X,
-  Edit2,
-  Check,
-  Copy,
-  Trash2,
-  GripVertical,
-  CheckCheck,
+  ArrowDown,
 } from 'lucide-react';
 
 interface RouteCanvasProps {
@@ -40,14 +40,9 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
   const [titleValue, setTitleValue] = useState(route.title);
   const [copied, setCopied] = useState(false);
 
-  // Drag state
+  // Drag state inside canvas
   const [draggedStepIndex, setDraggedStepIndex] = useState<number | null>(null);
   const [dropSlot, setDropSlot] = useState<number | null>(null);
-
-  React.useEffect(() => {
-    setTitleValue(route.title);
-    setIsEditingTitle(false);
-  }, [route.id, route.title]);
 
   const handleTitleSubmit = () => {
     if (titleValue.trim()) {
@@ -56,12 +51,30 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
     setIsEditingTitle(false);
   };
 
-  // Drag start for a route step
+  const handleCopy = async () => {
+    if (route.steps.length === 0) return;
+    const text = route.steps
+      .map((s, idx) => {
+        const card = cardsMap[s.cardId];
+        return `${idx + 1}. ${card ? card.title : '未知卡片'}`;
+      })
+      .join('\n');
+
+    try {
+      await navigator.clipboard.writeText(`【${route.title}】\n${text}`);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // fallback
+    }
+  };
+
+  // Step item dragging within route
   const handleStepDragStart = (e: React.DragEvent, index: number) => {
     setDraggedStepIndex(index);
     e.dataTransfer.setData(
       'text/plain',
-      JSON.stringify({ type: 'step', stepId: route.steps[index]?.id, index })
+      JSON.stringify({ type: 'step', index, routeId: route.id })
     );
     e.dataTransfer.effectAllowed = 'move';
   };
@@ -71,8 +84,8 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
     setDropSlot(null);
   };
 
-  // Calculate top/bottom half for drop slot
-  const handleStepDragOver = (e: React.DragEvent, index: number) => {
+  // Calculating drop slot for reordering or inserting
+  const handleStepDragOver = (e: React.DragEvent, itemIndex: number) => {
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'move';
@@ -80,13 +93,16 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
     const rect = e.currentTarget.getBoundingClientRect();
     const offsetY = e.clientY - rect.top;
     const isTopHalf = offsetY < rect.height / 2;
-    const targetSlot = isTopHalf ? index : index + 1;
+    const targetSlot = isTopHalf ? itemIndex : itemIndex + 1;
     setDropSlot(targetSlot);
   };
 
   const handleContainerDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    if (route.steps.length === 0) {
+      setDropSlot(0);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -96,21 +112,23 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
       if (!raw) return;
       const data = JSON.parse(raw);
 
-      const targetSlot = dropSlot !== null ? dropSlot : route.steps.length;
-
-      if (data.type === 'step' && typeof data.index === 'number') {
-        const fromIndex = data.index;
-        let targetIndex = targetSlot;
-        if (targetIndex > fromIndex) {
-          targetIndex -= 1;
+      if (data.type === 'card' && data.cardId) {
+        // Dropping a card from left panel into route
+        const targetIndex = dropSlot !== null ? dropSlot : route.steps.length;
+        onDropCard(data.cardId, targetIndex);
+      } else if (data.type === 'step' && typeof data.index === 'number') {
+        // Reordering steps within current route
+        if (dropSlot !== null) {
+          const fromIndex = data.index;
+          let targetIndex = dropSlot;
+          if (targetIndex > fromIndex) {
+            targetIndex -= 1;
+          }
+          targetIndex = Math.max(0, Math.min(targetIndex, route.steps.length - 1));
+          if (fromIndex !== targetIndex) {
+            onMoveStep(fromIndex, targetIndex);
+          }
         }
-        targetIndex = Math.max(0, Math.min(targetIndex, route.steps.length - 1));
-        if (fromIndex !== targetIndex) {
-          onMoveStep(fromIndex, targetIndex);
-        }
-      } else if (data.type === 'card' && data.cardId) {
-        // Dragged card from cards panel into specific position
-        onDropCard(data.cardId, targetSlot);
       }
     } catch {
       // ignore
@@ -119,24 +137,10 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
     setDropSlot(null);
   };
 
-  const handleCopy = () => {
-    const text = [
-      route.title,
-      ...route.steps.map((s, idx) => {
-        const card = cardsMap[s.cardId];
-        return `${idx + 1}. ${card ? card.title : '未知事項'}`;
-      }),
-    ].join('\n');
-
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
     <div
       id="route-canvas-container"
-      className="bg-white rounded-2xl border border-neutral-200 p-3 sm:p-5 flex flex-col h-full shadow-xs min-w-0 w-full overflow-hidden"
+      className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-3 sm:p-5 flex flex-col h-full shadow-xs min-w-0 w-full overflow-hidden transition-colors"
       onDragOver={handleContainerDragOver}
       onDragLeave={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -146,7 +150,7 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
       onDrop={handleDrop}
     >
       {/* Route Header */}
-      <div className="flex flex-col gap-2.5 sm:gap-3 pb-3 border-b border-neutral-100 min-w-0 w-full">
+      <div className="flex flex-col gap-2.5 sm:gap-3 pb-3 border-b border-neutral-100 dark:border-neutral-800 min-w-0 w-full">
         <div className="flex items-center justify-between gap-2 min-w-0 w-full">
           {/* Title */}
           <div className="flex-1 min-w-0">
@@ -162,30 +166,30 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
                     if (e.key === 'Escape') setIsEditingTitle(false);
                   }}
                   autoFocus
-                  className="min-w-0 w-full flex-1 text-base font-bold text-neutral-900 bg-neutral-50 px-2.5 py-1.5 border border-neutral-300 rounded-lg focus:outline-hidden focus:bg-white focus:border-neutral-900"
+                  className="min-w-0 w-full flex-1 text-base font-bold text-neutral-900 dark:text-white bg-neutral-50 dark:bg-neutral-800 px-2.5 py-1.5 border border-neutral-300 dark:border-neutral-700 rounded-lg focus:outline-hidden focus:bg-white dark:focus:bg-neutral-800 focus:border-neutral-900 dark:focus:border-neutral-400"
                 />
                 <button
                   type="button"
                   onClick={handleTitleSubmit}
-                  className="p-1.5 text-emerald-700 hover:bg-emerald-50 rounded-lg cursor-pointer shrink-0"
+                  className="p-1.5 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 rounded-lg cursor-pointer shrink-0"
                 >
                   <Check className="w-4 h-4" />
                 </button>
               </div>
             ) : (
               <div className="flex items-center gap-2 group">
-                <h2 className="text-base sm:text-lg font-bold text-neutral-900 truncate">
+                <h2 className="text-base sm:text-lg font-bold text-neutral-900 dark:text-white truncate">
                   {route.title}
                 </h2>
                 <button
                   type="button"
                   onClick={() => setIsEditingTitle(true)}
-                  className="p-1.5 sm:p-1 text-neutral-400 hover:text-neutral-700 rounded-md transition-colors cursor-pointer shrink-0"
+                  className="p-1.5 sm:p-1 text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-200 rounded-md transition-colors cursor-pointer shrink-0"
                   title="重新命名此路線"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
                 </button>
-                <span className="text-xs bg-neutral-100 text-neutral-600 px-2 py-0.5 rounded-full font-medium shrink-0">
+                <span className="text-xs bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 px-2 py-0.5 rounded-full font-medium shrink-0">
                   {route.steps.length} 步
                 </span>
               </div>
@@ -198,10 +202,14 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
               type="button"
               onClick={handleCopy}
               disabled={route.steps.length === 0}
-              className="px-2.5 py-1.5 text-xs font-medium text-neutral-700 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-30"
+              className="px-2.5 py-1.5 text-xs font-medium text-neutral-700 dark:text-neutral-200 bg-neutral-50 dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 border border-neutral-200 dark:border-neutral-700 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-30"
               title="複製路線步驟清單"
             >
-              {copied ? <CheckCheck className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? (
+                <CheckCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              ) : (
+                <Copy className="w-3.5 h-3.5" />
+              )}
               <span className="hidden xs:inline">{copied ? '已複製' : '複製文字'}</span>
             </button>
 
@@ -213,7 +221,7 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
                     onClearSteps();
                   }
                 }}
-                className="px-2 py-1.5 text-xs text-neutral-500 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors cursor-pointer"
+                className="px-2 py-1.5 text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded-lg transition-colors cursor-pointer"
               >
                 清空
               </button>
@@ -227,7 +235,7 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
                     onDeleteRoute();
                   }
                 }}
-                className="p-1.5 text-neutral-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                className="p-1.5 text-neutral-400 dark:text-neutral-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors cursor-pointer"
                 title="刪除此路線"
               >
                 <Trash2 className="w-3.5 h-3.5" />
@@ -248,13 +256,15 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
         {route.steps.length === 0 ? (
           <div
             className={`h-56 sm:h-64 border-2 border-dashed rounded-2xl flex flex-col items-center justify-center p-6 text-center transition-colors ${
-              dropSlot !== null ? 'border-neutral-900 bg-neutral-50' : 'border-neutral-200'
+              dropSlot !== null
+                ? 'border-neutral-900 dark:border-neutral-100 bg-neutral-50 dark:bg-neutral-800/60'
+                : 'border-neutral-200 dark:border-neutral-800'
             }`}
           >
-            <p className="text-sm font-medium text-neutral-600 mb-1">
+            <p className="text-sm font-medium text-neutral-600 dark:text-neutral-300 mb-1">
               路線目前空白
             </p>
-            <p className="text-xs text-neutral-400 max-w-xs">
+            <p className="text-xs text-neutral-400 dark:text-neutral-500 max-w-xs">
               點擊卡片庫中的卡片「+ 加入」或拖曳卡片排定路線步驟
             </p>
           </div>
@@ -269,7 +279,7 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
               <React.Fragment key={step.id}>
                 {/* Drop Indicator Bar Before */}
                 {showDropBefore && (
-                  <div className="h-1 bg-neutral-900 rounded-full mx-1 transition-all" />
+                  <div className="h-1 bg-neutral-900 dark:bg-neutral-100 rounded-full mx-1 transition-all" />
                 )}
 
                 {/* Step Card (Touch-optimized controls on mobile) */}
@@ -278,21 +288,21 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
                   onDragStart={(e) => handleStepDragStart(e, index)}
                   onDragEnd={handleStepDragEnd}
                   onDragOver={(e) => handleStepDragOver(e, index)}
-                  className={`p-3 sm:p-2.5 bg-white border rounded-xl flex items-center justify-between gap-2.5 shadow-2xs transition-all ${
+                  className={`p-3 sm:p-2.5 bg-white dark:bg-neutral-800/80 border rounded-xl flex items-center justify-between gap-2.5 shadow-2xs transition-all ${
                     isDragging
-                      ? 'opacity-30 border-dashed border-neutral-400'
-                      : 'border-neutral-200 hover:border-neutral-300'
+                      ? 'opacity-30 border-dashed border-neutral-400 dark:border-neutral-500'
+                      : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
                   }`}
                   title="可上下拖曳調整順序，亦可拖回左側卡庫移除"
                 >
                   <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span className="text-neutral-400 hover:text-neutral-700 cursor-grab active:cursor-grabbing shrink-0 hidden xs:inline-block">
+                    <span className="text-neutral-400 dark:text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 cursor-grab active:cursor-grabbing shrink-0 hidden xs:inline-block">
                       <GripVertical className="w-3.5 h-3.5" />
                     </span>
-                    <span className="w-5 h-5 sm:w-5 sm:h-5 rounded-full bg-neutral-900 text-white text-xs font-semibold flex items-center justify-center shrink-0">
+                    <span className="w-5 h-5 sm:w-5 sm:h-5 rounded-full bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 text-xs font-semibold flex items-center justify-center shrink-0">
                       {index + 1}
                     </span>
-                    <span className="text-sm font-semibold text-neutral-900 truncate">
+                    <span className="text-sm font-semibold text-neutral-900 dark:text-white truncate">
                       {card ? card.title : '已刪除的卡片'}
                     </span>
                   </div>
@@ -306,7 +316,7 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
                       className={`p-2 sm:p-1 rounded-md transition-colors min-w-[32px] min-h-[32px] flex items-center justify-center ${
                         index === 0
                           ? 'invisible pointer-events-none'
-                          : 'text-neutral-400 hover:text-neutral-800 active:bg-neutral-100 hover:bg-neutral-100 cursor-pointer'
+                          : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-100 active:bg-neutral-100 dark:active:bg-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer'
                       }`}
                       title="往上移"
                     >
@@ -319,7 +329,7 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
                       className={`p-2 sm:p-1 rounded-md transition-colors min-w-[32px] min-h-[32px] flex items-center justify-center ${
                         index === route.steps.length - 1
                           ? 'invisible pointer-events-none'
-                          : 'text-neutral-400 hover:text-neutral-800 active:bg-neutral-100 hover:bg-neutral-100 cursor-pointer'
+                          : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-100 active:bg-neutral-100 dark:active:bg-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-700 cursor-pointer'
                       }`}
                       title="往下移"
                     >
@@ -328,7 +338,7 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
                     <button
                       type="button"
                       onClick={() => onRemoveStep(index)}
-                      className="p-2 sm:p-1 text-neutral-400 hover:text-rose-600 active:bg-rose-50 hover:bg-rose-50 rounded-md transition-colors cursor-pointer min-w-[32px] min-h-[32px] flex items-center justify-center"
+                      className="p-2 sm:p-1 text-neutral-400 dark:text-neutral-500 hover:text-rose-600 dark:hover:text-rose-400 active:bg-rose-50 dark:active:bg-rose-950/40 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-md transition-colors cursor-pointer min-w-[32px] min-h-[32px] flex items-center justify-center"
                       title="從路線移除"
                     >
                       <X className="w-4 h-4" />
@@ -338,12 +348,12 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
 
                 {/* Drop Indicator Bar After (only for the last item) */}
                 {showDropAfter && (
-                  <div className="h-1 bg-neutral-900 rounded-full mx-1 transition-all" />
+                  <div className="h-1 bg-neutral-900 dark:bg-neutral-100 rounded-full mx-1 transition-all" />
                 )}
 
                 {/* Flow indicator between steps */}
                 {index < route.steps.length - 1 && !showDropAfter && (
-                  <div className="flex items-center justify-center py-0.5 text-neutral-300">
+                  <div className="flex items-center justify-center py-0.5 text-neutral-300 dark:text-neutral-600">
                     <ArrowDown className="w-3.5 h-3.5" />
                   </div>
                 )}
@@ -354,8 +364,8 @@ export const RouteCanvas: React.FC<RouteCanvasProps> = ({
       </div>
 
       {/* Footer */}
-      <div className="pt-2 border-t border-neutral-100 flex items-center justify-end text-[11px]">
-        <span className="text-emerald-600 font-medium">● 自動儲存於本機</span>
+      <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-end text-[11px]">
+        <span className="text-emerald-600 dark:text-emerald-400 font-medium">● 自動儲存於本機</span>
       </div>
     </div>
   );

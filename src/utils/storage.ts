@@ -5,6 +5,7 @@ const STORAGE_KEYS = {
   ROUTES: 'simple_card_routes_v3',
   CARDS: 'simple_card_items_v3',
   ACTIVE_ID: 'simple_card_active_route_v3',
+  THEME: 'simple_card_theme_v1',
 };
 
 // Check and clear legacy mock data if needed
@@ -84,7 +85,32 @@ export function resetAllStorage(): void {
     localStorage.removeItem(STORAGE_KEYS.ROUTES);
     localStorage.removeItem(STORAGE_KEYS.CARDS);
     localStorage.removeItem(STORAGE_KEYS.ACTIVE_ID);
+    localStorage.removeItem(STORAGE_KEYS.THEME);
   } catch (err) {
     console.error('Failed to reset storage', err);
   }
 }
+
+export type ThemeMode = 'light' | 'dark';
+
+export function loadTheme(): ThemeMode {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEYS.THEME);
+    if (saved === 'dark' || saved === 'light') return saved;
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      return 'dark';
+    }
+    return 'light';
+  } catch {
+    return 'light';
+  }
+}
+
+export function saveTheme(theme: ThemeMode): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.THEME, theme);
+  } catch (err) {
+    console.error('Failed to save theme', err);
+  }
+}
+
